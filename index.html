@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مجتمع binX</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #0088cc; /* أزرق تليجرام */
+            --primary-hover: #0077b3;
+            --bg-color: #e5ddd5; /* لون خلفية واتساب */
+            --surface-color: #ffffff;
+            --text-primary: #111b21;
+            --text-secondary: #667781;
+            --border-color: #d1d7db;
+            --msg-sent-bg: #dcf8c6; /* لون رسائل المرسل */
+            --msg-received-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-image: url('https://www.transparenttextures.com/patterns/cubes.png'); /* نمط خلفية خفيف */
+        }
+
+        /* --- تخصيص شريط التمرير (Scrollbar) --- */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+
+        /* --- الحاوية الرئيسية --- */
+        .app-container {
+            width: 100%;
+            max-width: 800px;
+            height: 100vh;
+            background-color: var(--surface-color);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 850px) {
+            .app-container {
+                height: 90vh;
+                border-radius: 20px;
+            }
+        }
+
+        /* --- شاشة تسجيل الدخول --- */
+        #login-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            z-index: 20;
+            position: absolute;
+            width: 100%;
+        }
+
+        .login-card {
+            background: var(--surface-color);
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 380px;
+        }
+
+        .logo-text {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary-color);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .login-card p {
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            font-size: 15px;
+        }
+
+        .login-card input {
+            width: 100%;
+            padding: 16px 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 14px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background: #f8f9fa;
+        }
+
+        .login-card input:focus {
+            border-color: var(--primary-color);
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(0, 136, 204, 0.1);
+        }
+
+        .login-card button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: 700;
+            border-radius: 14px;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .login-card button:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 136, 204, 0.3);
+        }
+
+        /* --- شاشة الشات --- */
+        #chat-screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            background-color: #efeae2;
+        }
+
+        header {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+            z-index: 10;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-icon {
+            background: var(--primary-color);
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .header-text h2 {
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+
+        .header-text p {
+            font-size: 13px;
+            color: #1fa855;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .logout-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .logout-btn:hover { color: #e53935; }
+
+        /* --- منطقة الرسائل --- */
+        #messages {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-image: url('https://www.transparenttextures.com/patterns/binding-light.png');
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+            animation: fadeIn 0.3s ease-out;
+            position: relative;
+        }
+
+        /* رسائل المستقبل (الآخرين) */
+        .message.received { align-self: flex-start; }
+        
+        /* رسائل المرسل (أنا) */
+        .message.sent { align-self: flex-end; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message-content {
+            padding: 8px 12px;
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            word-wrap: break-word;
+        }
+
+        .message.received .message-content {
+            background-color: var(--msg-received-bg);
+            border-top-right-radius: 0;
+        }
+
+        .message.sent .message-content {
+            background-color: var(--msg-sent-bg);
+            border-top-left-radius: 0;
+        }
+
+        .message-content .username {
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        /* إخفاء اسمي في رسائلي */
+        .message.sent .username { display: none; }
+
+        .message-content .text {
+            font-size: 15px;
+            line-height: 1.4;
+            color: var(--text-primary);
+            margin-bottom: 12px; /* مساحة للوقت */
+            white-space: pre-wrap;
+        }
+
+        .message-content .time {
+            font-size: 11px;
+            color: var(--text-secondary);
+            position: absolute;
+            bottom: 4px;
+            left: 10px; /* للاتجاه العربي من اليمين لليسار */
+        }
+
+        /* --- حقل الإدخال --- */
+        .input-area {
+            display: flex;
+            padding: 15px;
+            background-color: #f0f2f5;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-wrapper {
+            flex-grow: 1;
+            background-color: var(--surface-color);
+            border-radius: 24px;
+            padding: 8px 20px;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 8px 0;
+            font-size: 16px;
+            outline: none;
+            color: var(--text-primary);
+        }
+
+        .send-btn {
+            background-color: var(--primary-color);
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            transition: all 0.2s;
+            box-shadow: 0 2px 5px rgba(0, 136, 204, 0.3);
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+            background-color: var(--primary-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <div id="login-screen">
+            <div class="login-card">
+                <div class="logo-text">
+                    <span class="material-symbols-outlined" style="font-size: 38px;">forum</span>
+                    مجتمعنا
+                </div>
+                <p>binX Hypnosis Community </p>
+                
+                <input type="text" id="username-input" placeholder="أدخل اسمك..." autocomplete="off" onkeypress="handleLoginKeyPress(event)">
+                
+                <button onclick="joinChat()">دخول للمحادثة</button>
+            </div>
+        </div>
+
+        <div id="chat-screen">
+            <header>
+                <div class="header-info">
+                    <div class="header-icon">
+                        <span class="material-symbols-outlined">groups</span>
+                    </div>
+                    <div class="header-text">
+                        <h2>مجموعة binX العامة</h2>
+                        <p><span style="width: 8px; height: 8px; background: #1fa855; border-radius: 50%; display: inline-block;"></span> متصل الآن</p>
+                    </div>
+                </div>
+                <button class="logout-btn" onclick="logout()">
+                    خروج <span class="material-symbols-outlined" style="font-size: 18px;">logout</span>
+                </button>
+            </header>
+            
+            <div id="messages"></div>
+
+            <div class="input-area">
+                <div class="input-wrapper">
+                    <input type="text" id="message-input" placeholder="اكتب رسالتك هنا..." onkeypress="handleMessageKeyPress(event)">
+                </div>
+                <button class="send-btn" onclick="sendMessage()">
+                    <span class="material-symbols-outlined" style="transform: rotate(180deg) translateX(2px);">send</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. إعدادات Firebase ---
+        // ⚠️ ضع مفاتيح مشروعك هنا ⚠️
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY", 
+            authDomain: "ffgg-17b33.firebaseapp.com",
+            databaseURL: "https://ffgg-17b33-default-rtdb.asia-southeast1.firebasedatabase.app/",
+            projectId: "ffgg-17b33",
+            storageBucket: "ffgg-17b33.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        let currentUser = "";
+        let userColor = "";
+
+        const materialColors = [
+            '#e53935', '#d81b60', '#8e24aa', '#5e35b1', '#3949ab', 
+            '#1e88e5', '#039be5', '#00acc1', '#00897b', '#43a047', 
+            '#f4511e', '#6d4c41'
+        ];
+
+        // --- الحصول على فرق وقت الخادم لتحسين حساب زمن الرسائل ---
+        let serverTimeOffset = 0; // بالملي ثانية
+        db.ref(".info/serverTimeOffset").on("value", (snap) => {
+            serverTimeOffset = snap.val() || 0;
+        });
+
+        // --- التحقق من Local Storage عند فتح الصفحة ---
+        window.onload = function() {
+            const savedUser = localStorage.getItem('binx_user');
+            const savedColor = localStorage.getItem('binx_color');
+
+            if (savedUser && savedColor) {
+                currentUser = savedUser;
+                userColor = savedColor;
+                showChatScreen();
+            }
+        };
+
+        function getRandomColor() {
+            return materialColors[Math.floor(Math.random() * materialColors.length)];
+        }
+
+        function handleLoginKeyPress(e) {
+            if (e.key === 'Enter') joinChat();
+        }
+
+        function handleMessageKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        function joinChat() {
+            const nameInput = document.getElementById('username-input').value.trim();
+            if (nameInput === "") {
+                alert("يرجى كتابة اسمك للبدء!");
+                return;
+            }
+            
+            currentUser = nameInput;
+            userColor = getRandomColor();
+
+            // حفظ البيانات في المتصفح
+            localStorage.setItem('binx_user', currentUser);
+            localStorage.setItem('binx_color', userColor);
+
+            showChatScreen();
+        }
+
+        function showChatScreen() {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('chat-screen').style.display = 'flex';
+            
+            // تفريغ الرسائل القديمة في الواجهة حتى لا تتكرر عند تسجيل الخروج والدخول
+            document.getElementById('messages').innerHTML = ""; 
+            loadMessages();
+            
+            // وضع المؤشر في حقل الكتابة فوراً
+            setTimeout(() => document.getElementById('message-input').focus(), 100);
+        }
+
+        function logout() {
+            localStorage.removeItem('binx_user');
+            localStorage.removeItem('binx_color');
+
+            // إلغاء المستمعين لتجنب تسريبات الأحداث (إن وُجدوا)
+            db.ref('global_chat').off();
+            db.ref('global_chat').orderByChild('timestamp').off();
+
+            window.location.reload(); // إعادة تحميل الصفحة للعودة لشاشة الدخول
+        }
+
+        // دالة مساعدة للهروب من HTML في نص المستخدم (لتفادي حقن HTML)
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function sendMessage() {
+            const msgInput = document.getElementById('message-input');
+            const text = msgInput.value.trim();
+
+            if (text === "") return;
+
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+            const messagesRef = db.ref('global_chat');
+            messagesRef.push({
+                name: currentUser,
+                text: text,
+                color: userColor,
+                time: timeString,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            msgInput.value = ""; 
+        }
+
+        // ---------- تحميل الرسائل و الاستماع للتغييرات ----------
+        function loadMessages() {
+            const messagesDiv = document.getElementById('messages');
+
+            // نلغي أي مستمعين سابقين لتجنب التكرار
+            db.ref('global_chat').off();
+            db.ref('global_chat').orderByChild('timestamp').off();
+
+            const orderedRef = db.ref('global_chat').orderByChild('timestamp');
+            const rawRef = db.ref('global_chat');
+
+            // عند إضافة رسالة جديدة (أو عند التحميل الأول)
+            orderedRef.on('child_added', (snapshot) => {
+                addMessageElement(snapshot);
+            });
+
+            // عند حذف رسالة (يحدث عند حذفها من أي عميل)
+            rawRef.on('child_removed', (snapshot) => {
+                const el = document.getElementById(snapshot.key);
+                if (el) el.remove();
+            });
+
+            // (اختياري) لو أردت التعامل مع تغييرات (مثلاً تعديل النص) يمكن إضافة child_changed
+            rawRef.on('child_changed', (snapshot) => {
+                // تحديث نص أو وقت إن تغير
+                const data = snapshot.val();
+                const el = document.getElementById(snapshot.key);
+                if (!el) return;
+                const textDiv = el.querySelector('.text');
+                const timeDiv = el.querySelector('.time');
+                if (textDiv) textDiv.textContent = data.text || '';
+                if (timeDiv) timeDiv.textContent = data.time || '';
+            });
+
+            // شغّل تنظيف الرسائل القديمة فوراً
+            deleteOldMessages();
+
+            // ثم جدولة التنظيف دوريًا (كل ساعة)
+            // ملاحظة: يمكن تغيير التردد حسب حاجتك (مثلاً كل 15 دقيقة)
+            if (!window._binx_cleaner_interval) {
+                window._binx_cleaner_interval = setInterval(deleteOldMessages, 60 * 60 * 1000); // كل ساعة
+            }
+        }
+
+        // دالة لإنشاء عنصر رسالة بأمان (بدون innerHTML مباشر)
+        function addMessageElement(snapshot) {
+            const data = snapshot.val();
+            const key = snapshot.key;
+            const messagesDiv = document.getElementById('messages');
+
+            // إذا كان العنصر موجود مسبقًا (مثلاً إعادة تفعيل المستمع) نتجاهل الإضافة المكررة
+            if (document.getElementById(key)) return;
+
+            const messageType = (data.name === currentUser) ? 'sent' : 'received';
+
+            const msgElement = document.createElement('div');
+            msgElement.className = `message ${messageType}`;
+            msgElement.id = key;
+
+            const content = document.createElement('div');
+            content.className = 'message-content';
+
+            const usernameDiv = document.createElement('div');
+            usernameDiv.className = 'username';
+            usernameDiv.style.color = data.color || '#000';
+            usernameDiv.textContent = data.name || 'مستخدم';
+
+            const textDiv = document.createElement('div');
+            textDiv.className = 'text';
+            // نضع النص كـ textContent لمنع حقن HTML، مع الحفاظ على فواصل الأسطر
+            textDiv.textContent = data.text || '';
+
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'time';
+            timeDiv.textContent = data.time || '';
+
+            // بناء الشجرة
+            content.appendChild(usernameDiv);
+            content.appendChild(textDiv);
+            content.appendChild(timeDiv);
+            msgElement.appendChild(content);
+            messagesDiv.appendChild(msgElement);
+
+            // النزول التلقائي للأسفل
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // ---------- حذف الرسائل الأقدم من 7 ساعات ----------
+        function deleteOldMessages() {
+            const messagesRef = db.ref('global_chat');
+            const sevenHours = 7 * 60 * 60 * 1000; // 7 ساعات بالملي ثانية
+
+            // استخدام وقت الخادم لتقليل الاعتماد على ساعة جهاز المستخدم
+            const serverNow = Date.now() + (serverTimeOffset || 0);
+            const cutoff = serverNow - sevenHours;
+
+            // نستخدم orderByChild('timestamp').endAt(cutoff) لجلب الرسائل القديمة فقط
+            messagesRef.orderByChild('timestamp').endAt(cutoff).once('value', (snapshot) => {
+                // snapshot يحتوي على كل الرسائل التي timestamp <= cutoff
+                snapshot.forEach((childSnap) => {
+                    // حذف بأمان
+                    try {
+                        childSnap.ref.remove().catch(() => {/* تجاهل أخطاء حذف متزامنة */});
+                    } catch (e) {
+                        // التجاهل؛ قد يتم حذف الرسالة بالفعل من قبل عميل آخر
+                    }
+                });
+            });
+        }
+
+        // تنظيف عند إغلاق الصفحة (اختياري، لتحرير الفواصل)
+        window.addEventListener('beforeunload', () => {
+            db.ref('global_chat').off();
+            db.ref('global_chat').orderByChild('timestamp').off();
+        });
+    </script>
+</body>
+</html>
